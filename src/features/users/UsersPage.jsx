@@ -1,7 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { MoreHorizontal, Search, UserRound } from 'lucide-react';
-import { toast } from 'sonner';
-import { mockUsers } from '@/mocks/backofficeMockData';
 import { useDebounce } from '@/hooks/use-debounce';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -44,8 +42,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useUpdateUserStatus, useUserDetail, useUsersList } from './hooks/useUsersData';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 10;
 
 function formatDate(date) {
   return new Date(date).toLocaleDateString('es-VE');
@@ -56,48 +55,45 @@ function statusBadge(status) {
 }
 
 export default function UsersPage() {
-  const [users, setUsers] = useState(mockUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [profileFilter, setProfileFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState(null);
   const [statusTarget, setStatusTarget] = useState(null);
 
-  const debouncedSearch = useDebounce(searchTerm, 250);
+  const debouncedSearch = useDebounce(searchTerm, 500);
 
-  const filteredUsers = useMemo(() => {
-    return users.filter((user) => {
-      const matchFilter = profileFilter === 'all' || user.profile_type === profileFilter;
-      const search = debouncedSearch.trim().toLowerCase();
-      const matchSearch =
-        !search ||
-        user.company_name.toLowerCase().includes(search) ||
-        user.email.toLowerCase().includes(search) ||
-        user.trade_name.toLowerCase().includes(search);
-      return matchFilter && matchSearch;
-    });
-  }, [users, profileFilter, debouncedSearch]);
+  const queryParams = {
+    page,
+    limit: PAGE_SIZE,
+    ...(debouncedSearch && { search: debouncedSearch }),
+    ...(profileFilter !== 'all' && { profile_type: profileFilter }),
+  };
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
-  const paginated = filteredUsers.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const { data: usersData, isLoading, isError } = useUsersList(queryParams);
+  const { data: userDetail, isLoading: isLoadingDetail } = useUserDetail(selectedUserId);
+  const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateUserStatus();
+
+  const users = usersData?.items || [];
+  const totalPages = usersData?.total_pages || 1;
+  const totalCount = usersData?.total || 0;
 
   const toggleStatus = () => {
     if (!statusTarget) return;
     const nextStatus = statusTarget.status === 'active' ? 'suspended' : 'active';
-    setUsers((prev) =>
-      prev.map((u) => (u.id === statusTarget.id ? { ...u, status: nextStatus } : u))
+    updateStatus(
+      { id: statusTarget.id, data: { status: nextStatus, reason: 'Cambio administrativo manual' } },
+      {
+        onSettled: () => setStatusTarget(null),
+      }
     );
-    toast.success(
-      nextStatus === 'active' ? 'Cuenta reactivada (mock)' : 'Cuenta suspendida (mock)'
-    );
-    setStatusTarget(null);
   };
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Users</h1>
-        <Badge variant="secondary">{filteredUsers.length} resultados</Badge>
+        <Badge variant="secondary">{totalCount} resultados</Badge>
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row">
@@ -132,106 +128,132 @@ export default function UsersPage() {
         </Select>
       </div>
 
-      <div className="rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Company / Trade Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Profile</TableHead>
-              <TableHead>Registration</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {paginated.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>
-                  <p className="font-medium">{user.company_name}</p>
-                  <p className="text-xs text-muted-foreground">{user.trade_name}</p>
-                </TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell className="uppercase">{user.profile_type}</TableCell>
-                <TableCell>{formatDate(user.registration_date)}</TableCell>
-                <TableCell>
-                  <Badge variant={statusBadge(user.status)}>{user.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setSelectedUser(user)}>
-                        Ver perfil completo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setStatusTarget(user)}>
-                        {user.status === 'active' ? 'Suspender cuenta' : 'Reactivar cuenta'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Pagina {page} de {totalPages}
-        </p>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            disabled={page <= 1}
-            onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-          >
-            Anterior
-          </Button>
-          <Button
-            variant="outline"
-            disabled={page >= totalPages}
-            onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-          >
-            Siguiente
-          </Button>
+      {isError ? (
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+          Error al cargar usuarios.
         </div>
-      </div>
+      ) : (
+        <>
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Company / Trade Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Profile</TableHead>
+                  <TableHead>Registration</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      Cargando usuarios...
+                    </TableCell>
+                  </TableRow>
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-4">
+                      No se encontraron usuarios.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <p className="font-medium">{user.company_name}</p>
+                        <p className="text-xs text-muted-foreground">{user.trade_name}</p>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell className="uppercase">{user.profile_type}</TableCell>
+                      <TableCell>{formatDate(user.registration_date)}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusBadge(user.status)}>{user.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setSelectedUserId(user.id)}>
+                              Ver perfil completo
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setStatusTarget(user)}>
+                              {user.status === 'active' ? 'Suspender cuenta' : 'Reactivar cuenta'}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
 
-      <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Pagina {page} de {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                disabled={page <= 1 || isLoading}
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              >
+                Anterior
+              </Button>
+              <Button
+                variant="outline"
+                disabled={page >= totalPages || isLoading}
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      <Dialog open={!!selectedUserId} onOpenChange={(open) => !open && setSelectedUserId(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserRound className="h-4 w-4" />
               Perfil de Empresa
             </DialogTitle>
-            <DialogDescription>Detalle completo de registro (mock data).</DialogDescription>
+            <DialogDescription>Detalle completo de registro.</DialogDescription>
           </DialogHeader>
-          {selectedUser && (
+          {isLoadingDetail ? (
+            <div className="py-4 text-center text-sm text-muted-foreground">Cargando perfil...</div>
+          ) : userDetail ? (
             <div className="space-y-2 text-sm">
               <p>
-                <span className="font-semibold">Company:</span> {selectedUser.company_name}
+                <span className="font-semibold">Company:</span> {userDetail.company_name}
               </p>
               <p>
-                <span className="font-semibold">Email:</span> {selectedUser.email}
+                <span className="font-semibold">Email:</span> {userDetail.email}
               </p>
               <p>
                 <span className="font-semibold">Contacts:</span>{' '}
-                {selectedUser.contacts.join(', ')}
+                {userDetail.contacts?.join(', ') || '-'}
               </p>
               <p>
                 <span className="font-semibold">Locations:</span>{' '}
-                {selectedUser.locations.join(', ')}
+                {userDetail.locations?.join(', ') || '-'}
               </p>
               <p>
                 <span className="font-semibold">Payment Preferences:</span>{' '}
-                {selectedUser.payment_preferences.join(', ')}
+                {userDetail.payment_preferences?.join(', ') || '-'}
               </p>
             </div>
+          ) : (
+            <div className="py-4 text-center text-sm text-muted-foreground">No se pudo cargar el perfil.</div>
           )}
         </DialogContent>
       </Dialog>
@@ -241,12 +263,14 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar cambio de estado</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta accion es simulada en frontend y no llama endpoints.
+              ¿Estás seguro de que deseas cambiar el estado de este usuario?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={toggleStatus}>Confirmar</AlertDialogAction>
+            <AlertDialogCancel disabled={isUpdatingStatus}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={toggleStatus} disabled={isUpdatingStatus}>
+              {isUpdatingStatus ? 'Guardando...' : 'Confirmar'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

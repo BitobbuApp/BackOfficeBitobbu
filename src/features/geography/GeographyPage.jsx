@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { mockCountries, mockStates } from '@/mocks/backofficeMockData';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,15 +32,48 @@ function normalizeCode(raw) {
   return raw.trim().toUpperCase().replace(/\s+/g, '_');
 }
 
+import {
+  useCountriesList,
+  useCreateCountry,
+  useCreateState,
+  useStatesList,
+  useUpdateCountry,
+  useUpdateCountryStatus,
+  useUpdateState,
+  useUpdateStateStatus,
+} from './hooks/useGeographyData';
+
 export default function GeographyPage() {
-  const [countries, setCountries] = useState(mockCountries);
-  const [states, setStates] = useState(mockStates);
   const [tab, setTab] = useState('countries');
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [countryCode, setCountryCode] = useState('VE');
+  const [selectedCountryCode, setSelectedCountryCode] = useState(''); // For states list filter
+  const [countryCode, setCountryCode] = useState(''); // For state creation form
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+
+  const { data: countriesData, isLoading: isLoadingCountries, isError: isErrorCountries } = useCountriesList();
+
+  const countries = countriesData || [];
+
+  // Update selected country code for list if empty and countries load
+  if (!selectedCountryCode && countries.length > 0) {
+    setSelectedCountryCode(countries[0].code);
+  }
+
+  const { data: statesData, isLoading: isLoadingStates, isError: isErrorStates } = useStatesList(
+    tab === 'states' ? selectedCountryCode : null
+  );
+
+  const states = statesData || [];
+
+  const { mutate: createCountry, isPending: isCreatingCountry } = useCreateCountry();
+  const { mutate: updateCountry, isPending: isUpdatingCountry } = useUpdateCountry();
+  const { mutate: updateCountryStatus, isPending: isUpdatingCountryStatus } = useUpdateCountryStatus();
+
+  const { mutate: createState, isPending: isCreatingState } = useCreateState();
+  const { mutate: updateState, isPending: isUpdatingState } = useUpdateState();
+  const { mutate: updateStateStatus, isPending: isUpdatingStateStatus } = useUpdateStateStatus();
 
   const countryOptions = useMemo(
     () => countries.map((c) => ({ code: c.code, name: c.name })),
@@ -79,46 +111,41 @@ export default function GeographyPage() {
 
     if (tab === 'countries') {
       const payload = {
-        id: editingItem?.id || `country-${Date.now()}`,
         code: normalizeCode(code),
         name: name.trim(),
-        is_active: editingItem?.is_active ?? true,
+        is_active: editingItem ? editingItem.is_active : true,
       };
-      setCountries((prev) =>
-        editingItem ? prev.map((c) => (c.id === editingItem.id ? payload : c)) : [...prev, payload]
-      );
-      toast.success(editingItem ? 'Pais actualizado (mock)' : 'Pais creado (mock)');
+      if (editingItem) {
+        updateCountry({ id: editingItem.id, data: payload }, { onSuccess: () => setEditorOpen(false) });
+      } else {
+        createCountry(payload, { onSuccess: () => setEditorOpen(false) });
+      }
     } else {
       const payload = {
-        id: editingItem?.id || `state-${Date.now()}`,
         country_code: countryCode,
         code: normalizeCode(code),
         name: name.trim(),
-        is_active: editingItem?.is_active ?? true,
+        is_active: editingItem ? editingItem.is_active : true,
       };
-      setStates((prev) =>
-        editingItem ? prev.map((s) => (s.id === editingItem.id ? payload : s)) : [...prev, payload]
-      );
-      toast.success(editingItem ? 'Estado actualizado (mock)' : 'Estado creado (mock)');
+      if (editingItem) {
+        updateState({ id: editingItem.id, data: payload }, { onSuccess: () => setEditorOpen(false) });
+      } else {
+        createState(payload, { onSuccess: () => setEditorOpen(false) });
+      }
     }
-    setEditorOpen(false);
   };
 
   const toggleCountry = (item) => {
-    setCountries((prev) =>
-      prev.map((country) =>
-        country.id === item.id ? { ...country, is_active: !country.is_active } : country
-      )
-    );
-    toast.success('Estado del pais actualizado (mock)');
+    updateCountryStatus({ id: item.id, data: { is_active: !item.is_active } });
   };
 
   const toggleState = (item) => {
-    setStates((prev) =>
-      prev.map((state) => (state.id === item.id ? { ...state, is_active: !state.is_active } : state))
-    );
-    toast.success('Estado del estado actualizado (mock)');
+    updateStateStatus({ id: item.id, data: { is_active: !item.is_active } });
   };
+
+  const isSaving =
+    isCreatingCountry || isUpdatingCountry || isCreatingState || isUpdatingState;
+  const isUpdatingStatus = isUpdatingCountryStatus || isUpdatingStateStatus;
 
   return (
     <div className="space-y-4">
@@ -127,108 +154,160 @@ export default function GeographyPage() {
         <Button onClick={openCreate}>Nuevo {tab === 'countries' ? 'Pais' : 'Estado'}</Button>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant={tab === 'countries' ? 'default' : 'outline'}
-          onClick={() => setTab('countries')}
-        >
-          Countries
-        </Button>
-        <Button
-          variant={tab === 'states' ? 'default' : 'outline'}
-          onClick={() => setTab('states')}
-        >
-          States
-        </Button>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-2">
+          <Button
+            variant={tab === 'countries' ? 'default' : 'outline'}
+            onClick={() => setTab('countries')}
+          >
+            Countries
+          </Button>
+          <Button
+            variant={tab === 'states' ? 'default' : 'outline'}
+            onClick={() => setTab('states')}
+          >
+            States
+          </Button>
+        </div>
+
+        {tab === 'states' && (
+          <div className="flex items-center gap-2">
+            <Label className="whitespace-nowrap">Filtrar por pais:</Label>
+            <Select value={selectedCountryCode} onValueChange={setSelectedCountryCode}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Seleccione pais" />
+              </SelectTrigger>
+              <SelectContent>
+                {countryOptions.map((country) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {tab === 'countries' ? (
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {countries.map((country) => (
-                <TableRow key={country.id}>
-                  <TableCell className="font-medium">{country.code}</TableCell>
-                  <TableCell>{country.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={country.is_active ? 'default' : 'secondary'}>
-                      {country.is_active ? 'active' : 'inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditCountry(country)}>
-                        Editar
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => toggleCountry(country)}>
-                        {country.is_active ? 'Desactivar' : 'Activar'}
-                      </Button>
-                    </div>
-                  </TableCell>
+        isErrorCountries ? (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+            Error al cargar paises.
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {isLoadingCountries ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">Cargando...</TableCell>
+                  </TableRow>
+                ) : countries.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">No hay paises registrados.</TableCell>
+                  </TableRow>
+                ) : (
+                  countries.map((country) => (
+                    <TableRow key={country.id}>
+                      <TableCell className="font-medium">{country.code}</TableCell>
+                      <TableCell>{country.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={country.is_active ? 'default' : 'secondary'}>
+                          {country.is_active ? 'active' : 'inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditCountry(country)}>
+                            Editar
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => toggleCountry(country)} disabled={isUpdatingStatus}>
+                            {country.is_active ? 'Desactivar' : 'Activar'}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )
       ) : (
-        <div className="rounded-lg border bg-card">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Country</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Nombre</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {states.map((state) => (
-                <TableRow key={state.id}>
-                  <TableCell>{state.country_code}</TableCell>
-                  <TableCell className="font-medium">{state.code}</TableCell>
-                  <TableCell>{state.name}</TableCell>
-                  <TableCell>
-                    <Badge variant={state.is_active ? 'default' : 'secondary'}>
-                      {state.is_active ? 'active' : 'inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button size="sm" variant="outline" onClick={() => openEditState(state)}>
-                        Editar
-                      </Button>
-                      <Button size="sm" variant="secondary" onClick={() => toggleState(state)}>
-                        {state.is_active ? 'Desactivar' : 'Activar'}
-                      </Button>
-                    </div>
-                  </TableCell>
+        isErrorStates ? (
+          <div className="rounded-lg border border-destructive bg-destructive/10 p-4 text-destructive">
+            Error al cargar estados.
+          </div>
+        ) : (
+          <div className="rounded-lg border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Code</TableHead>
+                  <TableHead>Nombre</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {isLoadingStates ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">Cargando...</TableCell>
+                  </TableRow>
+                ) : states.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4">No hay estados registrados.</TableCell>
+                  </TableRow>
+                ) : (
+                  states.map((state) => (
+                    <TableRow key={state.id}>
+                      <TableCell>{state.country_code}</TableCell>
+                      <TableCell className="font-medium">{state.code}</TableCell>
+                      <TableCell>{state.name}</TableCell>
+                      <TableCell>
+                        <Badge variant={state.is_active ? 'default' : 'secondary'}>
+                          {state.is_active ? 'active' : 'inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditState(state)}>
+                            Editar
+                          </Button>
+                          <Button size="sm" variant="secondary" onClick={() => toggleState(state)} disabled={isUpdatingStatus}>
+                            {state.is_active ? 'Desactivar' : 'Activar'}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )
       )}
 
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingItem ? 'Actualizar' : 'Crear'} {tab === 'countries' ? 'Pais' : 'Estado'}</DialogTitle>
-            <DialogDescription>Flujo mock para validar UI administrativa.</DialogDescription>
+            <DialogDescription>Formulario de edicion.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             {tab === 'states' && (
               <div className="space-y-1">
                 <Label>Pais</Label>
-                <Select value={countryCode} onValueChange={setCountryCode}>
+                <Select value={countryCode} onValueChange={setCountryCode} disabled={isSaving || editingItem}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -244,18 +323,18 @@ export default function GeographyPage() {
             )}
             <div className="space-y-1">
               <Label>Code</Label>
-              <Input value={code} onChange={(event) => setCode(event.target.value)} />
+              <Input value={code} onChange={(event) => setCode(event.target.value)} disabled={isSaving || editingItem} />
             </div>
             <div className="space-y-1">
               <Label>Nombre</Label>
-              <Input value={name} onChange={(event) => setName(event.target.value)} />
+              <Input value={name} onChange={(event) => setName(event.target.value)} disabled={isSaving} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditorOpen(false)}>
+            <Button variant="outline" onClick={() => setEditorOpen(false)} disabled={isSaving}>
               Cancelar
             </Button>
-            <Button onClick={save}>Guardar</Button>
+            <Button onClick={save} disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
