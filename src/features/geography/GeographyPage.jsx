@@ -58,7 +58,7 @@ export default function GeographyPage() {
 
   // Update selected country code for list if empty and countries load
   if (!selectedCountryCode && countries.length > 0) {
-    setSelectedCountryCode(countries[0].code);
+    setSelectedCountryCode(countries[0].id.toString());
   }
 
   const { data: statesData, isLoading: isLoadingStates, isError: isErrorStates } = useStatesList(
@@ -76,7 +76,7 @@ export default function GeographyPage() {
   const { mutate: updateStateStatus, isPending: isUpdatingStateStatus } = useUpdateStateStatus();
 
   const countryOptions = useMemo(
-    () => countries.map((c) => ({ code: c.code, name: c.name })),
+    () => countries.map((c) => ({ id: c.id, code: c.iso_code, name: c.name_es })),
     [countries]
   );
 
@@ -84,14 +84,14 @@ export default function GeographyPage() {
     setEditingItem(null);
     setCode('');
     setName('');
-    setCountryCode(countryOptions[0]?.code || 'VE');
+    setCountryCode(countryOptions[0]?.id?.toString() || '1');
     setEditorOpen(true);
   };
 
   const openEditCountry = (item) => {
     setEditingItem(item);
-    setCode(item.code);
-    setName(item.name);
+    setCode(item.iso_code);
+    setName(item.name_es);
     setEditorOpen(true);
   };
 
@@ -99,7 +99,7 @@ export default function GeographyPage() {
     setEditingItem(item);
     setCode(item.code);
     setName(item.name);
-    setCountryCode(item.country_code);
+    setCountryCode(item.country_id.toString());
     setEditorOpen(true);
   };
 
@@ -111,8 +111,8 @@ export default function GeographyPage() {
 
     if (tab === 'countries') {
       const payload = {
-        code: normalizeCode(code),
-        name: name.trim(),
+        iso_code: normalizeCode(code),
+        name_es: name.trim(),
         is_active: editingItem ? editingItem.is_active : true,
       };
       if (editingItem) {
@@ -122,7 +122,7 @@ export default function GeographyPage() {
       }
     } else {
       const payload = {
-        country_code: countryCode,
+        country_id: Number(countryCode),
         code: normalizeCode(code),
         name: name.trim(),
         is_active: editingItem ? editingItem.is_active : true,
@@ -179,7 +179,7 @@ export default function GeographyPage() {
               </SelectTrigger>
               <SelectContent>
                 {countryOptions.map((country) => (
-                  <SelectItem key={country.code} value={country.code}>
+                  <SelectItem key={country.id} value={country.id.toString()}>
                     {country.name}
                   </SelectItem>
                 ))}
@@ -217,8 +217,8 @@ export default function GeographyPage() {
                 ) : (
                   countries.map((country) => (
                     <TableRow key={country.id}>
-                      <TableCell className="font-medium">{country.code}</TableCell>
-                      <TableCell>{country.name}</TableCell>
+                      <TableCell className="font-medium">{country.iso_code}</TableCell>
+                      <TableCell>{country.name_es}</TableCell>
                       <TableCell>
                         <Badge variant={country.is_active ? 'default' : 'secondary'}>
                           {country.is_active ? 'active' : 'inactive'}
@@ -270,7 +270,7 @@ export default function GeographyPage() {
                 ) : (
                   states.map((state) => (
                     <TableRow key={state.id}>
-                      <TableCell>{state.country_code}</TableCell>
+                      <TableCell>{state.country_id}</TableCell>
                       <TableCell className="font-medium">{state.code}</TableCell>
                       <TableCell>{state.name}</TableCell>
                       <TableCell>
@@ -313,7 +313,7 @@ export default function GeographyPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {countryOptions.map((country) => (
-                      <SelectItem key={country.code} value={country.code}>
+                      <SelectItem key={country.id} value={country.id.toString()}>
                         {country.code} - {country.name}
                       </SelectItem>
                     ))}

@@ -43,40 +43,44 @@ export default function RfqsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
+                  <TableHead>Categoría</TableHead>
                   <TableHead>Producto</TableHead>
                   <TableHead>Comprador</TableHead>
                   <TableHead>Cantidad</TableHead>
+                  <TableHead>Respuestas</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Fecha</TableHead>
+                  <TableHead>Fecha Creación</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       Cargando RFQs...
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       No hay RFQs registrados.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((rfq) => (
                     <TableRow key={rfq.id}>
-                      <TableCell className="font-medium">{rfq.id}</TableCell>
+                      <TableCell className="font-medium">{rfq.category || 'N/A'}</TableCell>
                       <TableCell>{rfq.product_service}</TableCell>
-                      <TableCell>{rfq.buyer_company}</TableCell>
+                      <TableCell>{rfq.company?.trade_name || 'Desconocido'}</TableCell>
                       <TableCell>
                         {rfq.quantity} {rfq.unit}
                       </TableCell>
+                      <TableCell>{rfq.response_count || 0}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{rfq.status}</Badge>
                       </TableCell>
                       <TableCell>{formatDate(rfq.created_at)}</TableCell>
+                      <TableCell>{rfq.expiration_date ? formatDate(rfq.expiration_date) : '-'}</TableCell>
                     </TableRow>
                   ))
                 )}

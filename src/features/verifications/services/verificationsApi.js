@@ -1,19 +1,19 @@
 import apiClient from '@/api/axiosClient';
-import { verificationItemSchema, verificationsListResponseSchema } from '../schemas/verifications.schema';
+import { verificationItemSchema, verificationsListResponseSchema, companyDocumentSchema } from '../schemas/verifications.schema';
 
 export const verificationsApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/verifications', { params });
     // Handle case where items are returned directly or inside a paginated structure
-    if (Array.isArray(response)) {
-      return { items: response.map(item => verificationItemSchema.parse(item)) };
+    if (Array.isArray(response.data)) {
+      return { items: response.data.map(item => verificationItemSchema.parse(item)) };
     }
-    return verificationsListResponseSchema.parse(response);
+    return verificationsListResponseSchema.parse(response.data);
   },
 
-  async getDetail(id) {
-    const response = await apiClient.get(`/admin/verifications/${id}`);
-    return verificationItemSchema.parse(response);
+  async getDocuments(companyId) {
+    const response = await apiClient.get(`/admin/verifications/${companyId}/documents`);
+    return response.data.map(doc => companyDocumentSchema.parse(doc));
   },
 
   async approve(id) {

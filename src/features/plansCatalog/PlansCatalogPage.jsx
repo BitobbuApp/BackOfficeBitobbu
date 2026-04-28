@@ -35,10 +35,8 @@ import {
 function emptyForm() {
   return {
     name: '',
-    code: '',
-    price_usd_monthly: '',
-    trial_days: '',
-    max_users: '',
+    price: '',
+    billing_cycle: '30',
   };
 }
 
@@ -77,26 +75,22 @@ export default function PlansCatalogPage() {
     setEditingPlan(plan);
     setForm({
       name: plan.name,
-      code: plan.code,
-      price_usd_monthly: String(plan.price_usd_monthly),
-      trial_days: String(plan.trial_days),
-      max_users: String(plan.max_users),
+      price: String(plan.price),
+      billing_cycle: String(plan.billing_cycle),
     });
     setIsEditorOpen(true);
   };
 
   const savePlan = () => {
-    if (!form.name.trim() || !form.code.trim()) {
-      toast.error('Name y code son obligatorios');
+    if (!form.name.trim()) {
+      toast.error('El nombre del plan es obligatorio');
       return;
     }
 
     const payload = {
       name: form.name.trim(),
-      code: form.code.trim().toLowerCase().replace(/\s+/g, '_'),
-      price_usd_monthly: Number(form.price_usd_monthly || 0),
-      trial_days: Number(form.trial_days || 0),
-      max_users: Number(form.max_users || 0),
+      price: Number(form.price || 0),
+      billing_cycle: Number(form.billing_cycle || 30),
     };
 
     if (editingPlan) {
@@ -123,7 +117,7 @@ export default function PlansCatalogPage() {
 
   const toggleStatus = () => {
     if (!deactivateTarget) return;
-    const nextStatus = deactivateTarget.status === 'active' ? 'inactive' : 'active';
+    const nextStatus = !deactivateTarget.is_active;
 
     updateStatus(
       { id: deactivateTarget.id, data: { status: nextStatus, reason: 'Cambio de estado manual' } },
@@ -162,10 +156,8 @@ export default function PlansCatalogPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Plan</TableHead>
-                <TableHead>Code</TableHead>
-                <TableHead>Precio (USD/mes)</TableHead>
-                <TableHead>Trial</TableHead>
-                <TableHead>Max Users</TableHead>
+                <TableHead>Precio (USD)</TableHead>
+                <TableHead>Ciclo (Días)</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -187,13 +179,11 @@ export default function PlansCatalogPage() {
                 sortedPlans.map((plan) => (
                   <TableRow key={plan.id}>
                     <TableCell className="font-medium">{plan.name}</TableCell>
-                    <TableCell>{plan.code}</TableCell>
-                    <TableCell>${plan.price_usd_monthly}</TableCell>
-                    <TableCell>{plan.trial_days} dias</TableCell>
-                    <TableCell>{plan.max_users}</TableCell>
+                    <TableCell>${plan.price}</TableCell>
+                    <TableCell>{plan.billing_cycle}</TableCell>
                     <TableCell>
-                      <Badge variant={plan.status === 'active' ? 'default' : 'secondary'}>
-                        {plan.status}
+                      <Badge variant={plan.is_active ? 'default' : 'secondary'}>
+                        {plan.is_active ? 'Activo' : 'Inactivo'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
@@ -203,10 +193,10 @@ export default function PlansCatalogPage() {
                         </Button>
                         <Button
                           size="sm"
-                          variant={plan.status === 'active' ? 'destructive' : 'secondary'}
+                          variant={plan.is_active ? 'destructive' : 'secondary'}
                           onClick={() => setDeactivateTarget(plan)}
                         >
-                          {plan.status === 'active' ? 'Desactivar' : 'Activar'}
+                          {plan.is_active ? 'Desactivar' : 'Activar'}
                         </Button>
                       </div>
                     </TableCell>
@@ -237,53 +227,31 @@ export default function PlansCatalogPage() {
                 disabled={isSaving}
               />
             </div>
-            <div className="space-y-1">
-              <Label>Code</Label>
-              <Input
-                value={form.code}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, code: event.target.value }))
-                }
-                placeholder="growth_plus"
-                disabled={isSaving}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
-                <Label>Precio USD/mes</Label>
+                <Label>Precio USD</Label>
                 <Input
                   type="number"
                   min="0"
-                  value={form.price_usd_monthly}
+                  step="0.01"
+                  value={form.price}
                   onChange={(event) =>
                     setForm((prev) => ({
                       ...prev,
-                      price_usd_monthly: event.target.value,
+                      price: event.target.value,
                     }))
                   }
                   disabled={isSaving}
                 />
               </div>
               <div className="space-y-1">
-                <Label>Trial dias</Label>
+                <Label>Ciclo de Facturación (Días)</Label>
                 <Input
                   type="number"
                   min="0"
-                  value={form.trial_days}
+                  value={form.billing_cycle}
                   onChange={(event) =>
-                    setForm((prev) => ({ ...prev, trial_days: event.target.value }))
-                  }
-                  disabled={isSaving}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label>Max users</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form.max_users}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, max_users: event.target.value }))
+                    setForm((prev) => ({ ...prev, billing_cycle: event.target.value }))
                   }
                   disabled={isSaving}
                 />

@@ -5,11 +5,8 @@ export const geographyApi = {
   // Countries
   async getCountries() {
     const response = await apiClient.get('/admin/geography/countries');
-    if (Array.isArray(response)) {
-      return countriesListResponseSchema.parse(response);
-    }
-    if (response.items) {
-      return countriesListResponseSchema.parse(response.items);
+    if (Array.isArray(response.data)) {
+      return countriesListResponseSchema.parse(response.data);
     }
     return [];
   },
@@ -27,13 +24,10 @@ export const geographyApi = {
   },
 
   // States
-  async getStates(countryCode) {
-    const response = await apiClient.get('/admin/geography/states', { params: { country_code: countryCode } });
-    if (Array.isArray(response)) {
-      return statesListResponseSchema.parse(response);
-    }
-    if (response.items) {
-      return statesListResponseSchema.parse(response.items);
+  async getStates(countryId) {
+    const response = await apiClient.get('/admin/geography/states', { params: { country_id: countryId } });
+    if (Array.isArray(response.data)) {
+      return statesListResponseSchema.parse(response.data);
     }
     return [];
   },

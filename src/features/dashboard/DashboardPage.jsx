@@ -10,27 +10,39 @@ export default function DashboardPage() {
   const kpis = [
     {
       key: 'users',
-      label: 'Usuarios Registrados',
-      value: dashboardKpis?.total_users?.toLocaleString('en-US') ?? '-',
+      label: 'Usuarios Registrados (Activos)',
+      value: `${dashboardKpis?.total_users?.toLocaleString('en-US') ?? '-'} (${dashboardKpis?.active_users?.toLocaleString('en-US') ?? '-'})`,
       icon: Users,
     },
     {
-      key: 'rfqs',
-      label: 'RFQs Ultimos 7 Dias',
-      value: dashboardKpis?.rfqs_last_7_days?.toLocaleString('en-US') ?? '-',
+      key: 'companies',
+      label: 'Empresas Totales',
+      value: dashboardKpis?.total_companies?.toLocaleString('en-US') ?? '-',
       icon: FileText,
-    },
-    {
-      key: 'quotes',
-      label: 'Cotizaciones Ultimos 7 Dias',
-      value: dashboardKpis?.quotes_last_7_days?.toLocaleString('en-US') ?? '-',
-      icon: Send,
     },
     {
       key: 'verifications',
       label: 'Verificaciones Pendientes',
-      value: dashboardKpis?.suppliers_pending_verification?.toLocaleString('en-US') ?? '-',
+      value: dashboardKpis?.pending_verifications?.toLocaleString('en-US') ?? '-',
       icon: ShieldAlert,
+    },
+    {
+      key: 'rfqs',
+      label: 'RFQs Últimos 30 Días',
+      value: dashboardKpis?.rfqs_last_30_days?.toLocaleString('en-US') ?? '-',
+      icon: FileText,
+    },
+    {
+      key: 'quotes',
+      label: 'Cotizaciones Últimos 30 Días',
+      value: dashboardKpis?.quotes_last_30_days?.toLocaleString('en-US') ?? '-',
+      icon: Send,
+    },
+    {
+      key: 'gmv',
+      label: 'GMV Transaccionado (USD)',
+      value: dashboardKpis?.total_gmv_usd?.toLocaleString('en-US', { style: 'currency', currency: 'USD' }) ?? '-',
+      icon: BarChart3,
     },
   ];
 

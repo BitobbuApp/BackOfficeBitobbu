@@ -4,13 +4,9 @@ import { planItemSchema, plansListResponseSchema } from '../schemas/plansCatalog
 export const plansCatalogApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/plans', { params });
-    if (Array.isArray(response)) {
-      return { items: response.map(item => planItemSchema.parse(item)) };
-    }
-    if (response.items) {
-      return plansListResponseSchema.parse(response);
-    }
-    return { items: [] };
+    // response.data is the flat array according to the payload
+    const items = plansListResponseSchema.parse(response.data);
+    return { items };
   },
 
   async create(data) {

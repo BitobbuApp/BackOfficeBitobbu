@@ -4,12 +4,12 @@ import { userDetailResponseSchema, usersListResponseSchema } from '../schemas/us
 export const usersApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/users', { params });
-    return usersListResponseSchema.parse(response);
+    return usersListResponseSchema.parse(response.data);
   },
 
   async getDetail(id) {
     const response = await apiClient.get(`/admin/users/${id}`);
-    return userDetailResponseSchema.parse(response);
+    return userDetailResponseSchema.parse(response.data);
   },
 
   async updateStatus(id, { status, reason }) {

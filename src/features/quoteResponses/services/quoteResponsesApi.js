@@ -4,9 +4,9 @@ import { quoteResponseItemSchema, quoteResponsesListResponseSchema } from '../sc
 export const quoteResponsesApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/quote-responses', { params });
-    if (Array.isArray(response)) {
-      return { items: response.map(item => quoteResponseItemSchema.parse(item)) };
+    if (Array.isArray(response.data)) {
+      return { items: response.data.map(item => quoteResponseItemSchema.parse(item)) };
     }
-    return quoteResponsesListResponseSchema.parse(response);
+    return quoteResponsesListResponseSchema.parse(response.data);
   },
 };

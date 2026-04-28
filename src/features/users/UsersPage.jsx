@@ -25,13 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { UserDetailDialog } from './components/UserDetailDialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useUpdateUserStatus, useUserDetail, useUsersList } from './hooks/useUsersData';
+import { useUpdateUserStatus, useUsersList } from './hooks/useUsersData';
 
 const PAGE_SIZE = 10;
 
@@ -71,7 +65,6 @@ export default function UsersPage() {
   };
 
   const { data: usersData, isLoading, isError } = useUsersList(queryParams);
-  const { data: userDetail, isLoading: isLoadingDetail } = useUserDetail(selectedUserId);
   const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateUserStatus();
 
   const users = usersData?.items || [];
@@ -138,10 +131,11 @@ export default function UsersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Company / Trade Name</TableHead>
+                  <TableHead>User</TableHead>
+                  <TableHead>Company</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Profile</TableHead>
                   <TableHead>Registration</TableHead>
+                  <TableHead>Verification</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -163,12 +157,18 @@ export default function UsersPage() {
                   users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
-                        <p className="font-medium">{user.company_name}</p>
-                        <p className="text-xs text-muted-foreground">{user.trade_name}</p>
+                        <p className="font-medium">{user.full_name}</p>
+                      </TableCell>
+                      <TableCell>
+                        {user.company_name ?? <span className="text-muted-foreground text-xs">Sin empresa</span>}
                       </TableCell>
                       <TableCell>{user.email}</TableCell>
-                      <TableCell className="uppercase">{user.profile_type}</TableCell>
-                      <TableCell>{formatDate(user.registration_date)}</TableCell>
+                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="capitalize">
+                          {user.verification_status}
+                        </Badge>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={statusBadge(user.status)}>{user.status}</Badge>
                       </TableCell>
@@ -220,43 +220,7 @@ export default function UsersPage() {
         </>
       )}
 
-      <Dialog open={!!selectedUserId} onOpenChange={(open) => !open && setSelectedUserId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserRound className="h-4 w-4" />
-              Perfil de Empresa
-            </DialogTitle>
-            <DialogDescription>Detalle completo de registro.</DialogDescription>
-          </DialogHeader>
-          {isLoadingDetail ? (
-            <div className="py-4 text-center text-sm text-muted-foreground">Cargando perfil...</div>
-          ) : userDetail ? (
-            <div className="space-y-2 text-sm">
-              <p>
-                <span className="font-semibold">Company:</span> {userDetail.company_name}
-              </p>
-              <p>
-                <span className="font-semibold">Email:</span> {userDetail.email}
-              </p>
-              <p>
-                <span className="font-semibold">Contacts:</span>{' '}
-                {userDetail.contacts?.join(', ') || '-'}
-              </p>
-              <p>
-                <span className="font-semibold">Locations:</span>{' '}
-                {userDetail.locations?.join(', ') || '-'}
-              </p>
-              <p>
-                <span className="font-semibold">Payment Preferences:</span>{' '}
-                {userDetail.payment_preferences?.join(', ') || '-'}
-              </p>
-            </div>
-          ) : (
-            <div className="py-4 text-center text-sm text-muted-foreground">No se pudo cargar el perfil.</div>
-          )}
-        </DialogContent>
-      </Dialog>
+      <UserDetailDialog userId={selectedUserId} onClose={() => setSelectedUserId(null)} />
 
       <AlertDialog open={!!statusTarget} onOpenChange={(open) => !open && setStatusTarget(null)}>
         <AlertDialogContent>

@@ -4,9 +4,9 @@ import { transactionItemSchema, transactionsListResponseSchema } from '../schema
 export const transactionsApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/transactions', { params });
-    if (Array.isArray(response)) {
-      return { items: response.map(item => transactionItemSchema.parse(item)) };
+    if (Array.isArray(response.data)) {
+      return { items: response.data.map(item => transactionItemSchema.parse(item)) };
     }
-    return transactionsListResponseSchema.parse(response);
+    return transactionsListResponseSchema.parse(response.data);
   },
 };

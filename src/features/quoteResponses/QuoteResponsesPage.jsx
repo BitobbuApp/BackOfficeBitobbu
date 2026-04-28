@@ -23,7 +23,7 @@ export default function QuoteResponsesPage() {
   const { data, isLoading, isError } = useQuoteResponsesList({ page, limit: PAGE_SIZE });
 
   const rows = data?.items || [];
-  const totalPages = data?.total_pages || 1;
+  const totalPages = data?.totalPages || data?.total_pages || 1;
   const totalRecords = data?.total || 0;
 
   return (
@@ -44,10 +44,11 @@ export default function QuoteResponsesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
-                  <TableHead>RFQ</TableHead>
+                  <TableHead>Solicitud</TableHead>
                   <TableHead>Proveedor</TableHead>
-                  <TableHead>Precio USD</TableHead>
+                  <TableHead>Precio U. (USD)</TableHead>
                   <TableHead>Cantidad</TableHead>
+                  <TableHead>Total (USD)</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Fecha</TableHead>
                 </TableRow>
@@ -55,24 +56,27 @@ export default function QuoteResponsesPage() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       Cargando cotizaciones...
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       No hay cotizaciones registradas.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((quote) => (
                     <TableRow key={quote.id}>
-                      <TableCell className="font-medium">{quote.id}</TableCell>
-                      <TableCell>{quote.rfq_id}</TableCell>
-                      <TableCell>{quote.supplier_company}</TableCell>
-                      <TableCell>${quote.price_usd.toFixed(2)}</TableCell>
+                      <TableCell className="font-medium text-xs truncate max-w-[80px]" title={quote.id}>{quote.id.split('-')[0]}</TableCell>
+                      <TableCell className="font-medium">{quote.request_product || 'Desconocido'}</TableCell>
+                      <TableCell>{quote.supplier_name || 'Desconocido'}</TableCell>
+                      <TableCell>${quote.unit_price_usd.toFixed(2)}</TableCell>
                       <TableCell>{quote.quantity}</TableCell>
+                      <TableCell className="font-semibold text-primary">
+                        ${quote.total_amount_usd?.toLocaleString('en-US') || 0}
+                      </TableCell>
                       <TableCell>
                         <Badge variant="outline">{quote.status}</Badge>
                       </TableCell>

@@ -24,7 +24,7 @@ export default function TransactionsPage() {
   const { data, isLoading, isError } = useTransactionsList({ page, limit: PAGE_SIZE });
 
   const rows = data?.items || [];
-  const totalPages = data?.total_pages || 1;
+  const totalPages = data?.totalPages || data?.total_pages || 1;
   const totalRecords = data?.total || 0;
 
   return (
@@ -45,39 +45,43 @@ export default function TransactionsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
+                  <TableHead>Producto</TableHead>
                   <TableHead>Comprador</TableHead>
                   <TableHead>Proveedor</TableHead>
-                  <TableHead>Total</TableHead>
+                  <TableHead>Total (USD)</TableHead>
+                  <TableHead>Entrega</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Fecha</TableHead>
+                  <TableHead>Fecha Est.</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       Cargando transacciones...
                     </TableCell>
                   </TableRow>
                 ) : rows.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-4">
+                    <TableCell colSpan={8} className="text-center py-4">
                       No hay transacciones registradas.
                     </TableCell>
                   </TableRow>
                 ) : (
                   rows.map((trx) => (
                     <TableRow key={trx.id}>
-                      <TableCell className="font-medium">{trx.id}</TableCell>
-                      <TableCell>{trx.buyer_company}</TableCell>
-                      <TableCell>{trx.supplier_company}</TableCell>
-                      <TableCell>
-                        {trx.currency} {trx.total_amount_usd.toFixed(2)}
+                      <TableCell className="font-medium text-xs truncate max-w-[80px]" title={trx.id}>{trx.id.split('-')[0]}</TableCell>
+                      <TableCell className="font-medium">{trx.product_description || 'Desconocido'}</TableCell>
+                      <TableCell>{trx.buyer_name || 'Desconocido'}</TableCell>
+                      <TableCell>{trx.supplier_name || 'Desconocido'}</TableCell>
+                      <TableCell className="font-semibold text-primary">
+                        {trx.payment_currency || 'USD'} ${trx.total_amount_usd?.toLocaleString('en-US') || 0}
                       </TableCell>
+                      <TableCell>{trx.delivery_time || 'N/A'}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{trx.status}</Badge>
                       </TableCell>
-                      <TableCell>{formatDate(trx.created_at)}</TableCell>
+                      <TableCell>{trx.estimated_delivery_date ? formatDate(trx.estimated_delivery_date) : formatDate(trx.created_at)}</TableCell>
                     </TableRow>
                   ))
                 )}

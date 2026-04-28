@@ -17,6 +17,14 @@ export function useVerificationDetail(id) {
   });
 }
 
+export function useCompanyDocuments(companyId) {
+  return useQuery({
+    queryKey: ['verifications', 'documents', companyId],
+    queryFn: () => verificationsApi.getDocuments(companyId),
+    enabled: !!companyId,
+  });
+}
+
 export function useApproveVerification() {
   const queryClient = useQueryClient();
 
