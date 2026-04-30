@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
     authApi
       .getMe()
       .then((response) => {
-        const nextAdmin = response?.admin || response?.data?.admin || admin;
+        const nextAdmin = response.admin;
         if (nextAdmin) {
           storeSession({ token, admin: nextAdmin });
           setAdmin(nextAdmin);
@@ -40,8 +40,8 @@ export function AuthProvider({ children }) {
 
   const login = async ({ email, password }) => {
     const response = await authApi.login({ email, password });
-    const token = response?.token || response?.data?.token;
-    const nextAdmin = response?.admin || response?.data?.admin;
+    const token = response.token;
+    const nextAdmin = response.admin;
 
     if (!token || !nextAdmin) {
       throw new Error('Invalid login response');

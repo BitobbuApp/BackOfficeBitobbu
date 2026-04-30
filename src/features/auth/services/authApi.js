@@ -1,33 +1,14 @@
-import { mockAdminUsers } from '@/mocks/backofficeMockData';
+import apiClient from '@/api/axiosClient';
+import { getMeResponseSchema, loginResponseSchema } from '../schemas/auth.schema';
 
 export const authApi = {
   async login({ email, password }) {
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    const admin = mockAdminUsers.find(
-      (user) => user.email.toLowerCase() === email.toLowerCase() && user.password === password
-    );
-
-    if (!admin) {
-      const error = new Error('Credenciales invalidas');
-      error.response = { data: { message: 'Email o password incorrecto' } };
-      throw error;
-    }
-
-    return {
-      token: 'mock-admin-jwt-token',
-      admin: {
-        id: admin.id,
-        email: admin.email,
-        full_name: admin.full_name,
-        role: admin.role,
-      },
-    };
+    const response = await apiClient.post('/admin/auth/login', { email, password });
+    return loginResponseSchema.parse(response.data);
   },
 
   async getMe() {
-    await new Promise((resolve) => setTimeout(resolve, 150));
-    return {
-      admin: null,
-    };
+    const response = await apiClient.get('/admin/auth/me');
+    return getMeResponseSchema.parse(response.data);
   },
 };
