@@ -104,11 +104,6 @@ export default function LoginPage() {
               {isSubmitting ? 'Ingresando...' : 'Iniciar sesion'}
             </Button>
           </form>
-          <div className="mt-4 rounded-md border bg-muted/50 p-3 text-xs text-muted-foreground">
-            <p className="font-semibold text-foreground">Mock credentials</p>
-            <p>Email: admin@bitobbu.com</p>
-            <p>Password: Admin123!</p>
-          </div>
         </CardContent>
       </Card>
     </div>

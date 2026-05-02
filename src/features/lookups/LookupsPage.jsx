@@ -1,17 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { PlusCircle } from 'lucide-react';
+import { Navigate, useParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -28,17 +22,10 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-const tableOptions = [
-  { key: 'company_types', label: 'Company Types' },
-  { key: 'verification_statuses', label: 'Verification Statuses' },
-  { key: 'payment_terms', label: 'Payment Terms' },
-];
-
-function normalizeCode(raw) {
-  return raw.trim().toLowerCase().replace(/\s+/g, '_');
-}
-
+import {
+  DEFAULT_LOOKUP_TABLE_KEY,
+  LOOKUP_TABLES_BY_KEY,
+} from './lookupsTableRegistry';
 import {
   useCreateLookup,
   useLookupsList,
@@ -46,24 +33,51 @@ import {
   useUpdateLookupStatus,
 } from './hooks/useLookupsData';
 
+function normalizeCode(raw) {
+  return raw.trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function renderCellValue(item, column) {
+  const value = item[column.key];
+
+  if (column.type === 'status') {
+    return (
+      <Badge variant={value ? 'default' : 'secondary'}>
+        {value ? 'active' : 'inactive'}
+      </Badge>
+    );
+  }
+
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  return String(value);
+}
+
 export default function LookupsPage() {
-  const [selectedTable, setSelectedTable] = useState(tableOptions[0].key);
+  const { tableKey } = useParams();
+  const selectedTable = tableKey || DEFAULT_LOOKUP_TABLE_KEY;
+  const tableMeta = LOOKUP_TABLES_BY_KEY[selectedTable];
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [code, setCode] = useState('');
   const [label, setLabel] = useState('');
 
-  const { data: currentRows, isLoading, isError } = useLookupsList(selectedTable);
+  if (!tableMeta) {
+    return <Navigate to={`/config/lookups/${DEFAULT_LOOKUP_TABLE_KEY}`} replace />;
+  }
+
+  const { data: currentRows, isLoading, isError } = useLookupsList(tableMeta);
   const { mutate: createLookup, isPending: isCreating } = useCreateLookup();
   const { mutate: updateLookup, isPending: isUpdating } = useUpdateLookup();
   const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateLookupStatus();
 
-  const activeLabel = useMemo(
-    () => tableOptions.find((opt) => opt.key === selectedTable)?.label || selectedTable,
-    [selectedTable]
-  );
-
   const openCreate = () => {
+    if (!tableMeta.supportsCreate) {
+      return;
+    }
+
     setEditingItem(null);
     setCode('');
     setLabel('');
@@ -71,9 +85,13 @@ export default function LookupsPage() {
   };
 
   const openEdit = (item) => {
+    if (!tableMeta.supportsEdit) {
+      return;
+    }
+
     setEditingItem(item);
-    setCode(item.code);
-    setLabel(item.label);
+    setCode(item.code ?? '');
+    setLabel(item.label ?? '');
     setEditorOpen(true);
   };
 
@@ -91,66 +109,62 @@ export default function LookupsPage() {
 
     if (editingItem) {
       updateLookup(
-        { tableKey: selectedTable, id: editingItem.id, data: payload },
+        { tableConfig: tableMeta, id: String(editingItem.id), data: payload },
         {
           onSuccess: () => {
             setEditorOpen(false);
           },
         }
       );
-    } else {
-      createLookup(
-        { tableKey: selectedTable, data: payload },
-        {
-          onSuccess: () => {
-            setEditorOpen(false);
-          },
-        }
-      );
+      return;
     }
+
+    createLookup(
+      { tableConfig: tableMeta, data: payload },
+      {
+        onSuccess: () => {
+          setEditorOpen(false);
+        },
+      }
+    );
   };
 
   const toggleLookup = (item) => {
+    if (!tableMeta.supportsStatus) {
+      return;
+    }
+
     updateStatus({
-      tableKey: selectedTable,
-      id: item.id,
+      tableConfig: tableMeta,
+      id: String(item.id),
       data: { is_active: !item.is_active },
     });
   };
 
   const isSaving = isCreating || isUpdating;
+  const hasActions = tableMeta.supportsEdit || tableMeta.supportsStatus;
+  const columnCount = tableMeta.columns.length + (hasActions ? 1 : 0);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Lookup Tables</h1>
-          <p className="text-sm text-muted-foreground">
-            Crear, listar y actualizar valores de tablas lookup.
-          </p>
+          <h1 className="text-2xl font-semibold text-foreground">{tableMeta.label}</h1>
+          <p className="text-sm text-muted-foreground">{tableMeta.appFunction}</p>
         </div>
-        <Button onClick={openCreate}>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Nuevo Lookup
-        </Button>
+        {tableMeta.supportsCreate ? (
+          <Button onClick={openCreate}>
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Nuevo registro
+          </Button>
+        ) : null}
       </div>
 
-      <div className="rounded-lg border bg-card p-3">
-        <div className="max-w-xs space-y-1">
-          <Label>Tabla</Label>
-          <Select value={selectedTable} onValueChange={setSelectedTable}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {tableOptions.map((option) => (
-                <SelectItem key={option.key} value={option.key}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+      <div className="rounded-lg border bg-card p-3 space-y-1">
+        <p className="text-sm text-muted-foreground">{tableMeta.description}</p>
+        <p className="text-xs text-muted-foreground">
+          Endpoint conectado: <code>{tableMeta.endpoint}</code>
+        </p>
       </div>
 
       {isError ? (
@@ -162,49 +176,55 @@ export default function LookupsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{activeLabel} Code</TableHead>
-                <TableHead>Label</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {tableMeta.columns.map((column) => (
+                  <TableHead key={column.key}>{column.label}</TableHead>
+                ))}
+                {hasActions ? (
+                  <TableHead className="text-right">Actions</TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={columnCount} className="py-4 text-center text-muted-foreground">
                     Cargando registros...
                   </TableCell>
                 </TableRow>
               ) : currentRows && currentRows.length > 0 ? (
-                currentRows.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.code}</TableCell>
-                    <TableCell>{item.label}</TableCell>
-                    <TableCell>
-                      <Badge variant={item.is_active ? 'default' : 'secondary'}>
-                        {item.is_active ? 'active' : 'inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEdit(item)}>
-                          Editar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={item.is_active ? 'secondary' : 'default'}
-                          onClick={() => toggleLookup(item)}
-                          disabled={isUpdatingStatus}
-                        >
-                          {item.is_active ? 'Desactivar' : 'Activar'}
-                        </Button>
-                      </div>
-                    </TableCell>
+                currentRows.map((item, index) => (
+                  <TableRow key={item.id ?? `${tableMeta.key}-${index}`}>
+                    {tableMeta.columns.map((column) => (
+                      <TableCell key={column.key} className={column.key === 'code' ? 'font-medium' : ''}>
+                        {renderCellValue(item, column)}
+                      </TableCell>
+                    ))}
+                    {hasActions ? (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          {tableMeta.supportsEdit ? (
+                            <Button size="sm" variant="outline" onClick={() => openEdit(item)}>
+                              Editar
+                            </Button>
+                          ) : null}
+                          {tableMeta.supportsStatus ? (
+                            <Button
+                              size="sm"
+                              variant={item.is_active ? 'secondary' : 'default'}
+                              onClick={() => toggleLookup(item)}
+                              disabled={isUpdatingStatus}
+                            >
+                              {item.is_active ? 'Desactivar' : 'Activar'}
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={columnCount} className="py-4 text-center text-muted-foreground">
                     No hay registros en esta tabla.
                   </TableCell>
                 </TableRow>
@@ -214,42 +234,44 @@ export default function LookupsPage() {
         </div>
       )}
 
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingItem ? 'Editar Lookup' : 'Crear Lookup'}</DialogTitle>
-            <DialogDescription>Edición en tabla {activeLabel}.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <Label>Code</Label>
-              <Input
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-                placeholder="my_lookup_code"
-                disabled={isSaving || editingItem} // Generally code shouldn't change, but it's up to you
-              />
+      {tableMeta.supportsCreate || tableMeta.supportsEdit ? (
+        <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingItem ? 'Editar registro' : 'Crear registro'}</DialogTitle>
+              <DialogDescription>Edicion en tabla {tableMeta.label}.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label>Code</Label>
+                <Input
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  placeholder="my_lookup_code"
+                  disabled={isSaving || !!editingItem}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Label</Label>
+                <Input
+                  value={label}
+                  onChange={(event) => setLabel(event.target.value)}
+                  placeholder="My Lookup Label"
+                  disabled={isSaving}
+                />
+              </div>
             </div>
-            <div className="space-y-1">
-              <Label>Label</Label>
-              <Input
-                value={label}
-                onChange={(event) => setLabel(event.target.value)}
-                placeholder="My Lookup Label"
-                disabled={isSaving}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditorOpen(false)} disabled={isSaving}>
-              Cancelar
-            </Button>
-            <Button onClick={saveLookup} disabled={isSaving}>
-              {isSaving ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditorOpen(false)} disabled={isSaving}>
+                Cancelar
+              </Button>
+              <Button onClick={saveLookup} disabled={isSaving}>
+                {isSaving ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </div>
   );
 }

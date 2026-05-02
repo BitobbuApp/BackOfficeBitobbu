@@ -9,4 +9,11 @@ export const quoteResponsesApi = {
     }
     return quoteResponsesListResponseSchema.parse(response.data);
   },
+
+  async exportList(params) {
+    return apiClient.get('/admin/quote-responses/export', {
+      params,
+      responseType: 'blob',
+    });
+  },
 };

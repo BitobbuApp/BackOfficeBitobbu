@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const quoteResponseItemSchema = z.object({
   id: z.string().uuid().or(z.string()),
+  serial_number: z.number().optional().nullable(),
   request_id: z.string().uuid().or(z.string()),
   supplier_id: z.string().uuid().or(z.string()),
   unit_price_usd: z.number(),

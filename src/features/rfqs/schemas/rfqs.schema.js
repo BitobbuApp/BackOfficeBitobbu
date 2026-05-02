@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const rfqItemSchema = z.object({
   id: z.string().uuid().or(z.string()),
+  serial_number: z.number().optional().nullable(),
   product_service: z.string(),
   company: z.object({
     id: z.string(),

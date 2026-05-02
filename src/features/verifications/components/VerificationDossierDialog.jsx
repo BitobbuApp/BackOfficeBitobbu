@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { useCompanyDocuments, useApproveVerification, useRejectVerification } from '../hooks/useVerificationsData';
+import { useCompanyDocuments, useApproveVerification, useRejectVerification, useReviewDocument } from '../hooks/useVerificationsData';
 
 export function VerificationDossierDialog({ verification, onClose }) {
   const [rejectOpen, setRejectOpen] = useState(false);
@@ -20,6 +20,7 @@ export function VerificationDossierDialog({ verification, onClose }) {
   const { data: documents, isLoading } = useCompanyDocuments(verification?.company_id);
   const { mutate: approveMutation, isPending: isApproving } = useApproveVerification();
   const { mutate: rejectMutation, isPending: isRejecting } = useRejectVerification();
+  const { mutate: reviewDocMutation, isPending: isReviewingDoc } = useReviewDocument();
 
   const handleApprove = () => {
     approveMutation(verification.company_id, {
@@ -41,7 +42,14 @@ export function VerificationDossierDialog({ verification, onClose }) {
     );
   };
 
-  const isPending = isApproving || isRejecting;
+  const handleReviewDoc = (docId, status) => {
+    reviewDocMutation({
+      docId,
+      data: { status, notes: status === 'rejected' ? 'Documento no cumple los requisitos' : 'Aprobado por el administrador' }
+    });
+  };
+
+  const isPending = isApproving || isRejecting || isReviewingDoc;
 
   return (
     <Dialog open={!!verification} onOpenChange={(open) => !open && onClose()}>
@@ -84,25 +92,52 @@ export function VerificationDossierDialog({ verification, onClose }) {
                 <div className="grid grid-cols-1 gap-3">
                   {documents.map((doc) => (
                     <div key={doc.id} className="flex flex-col sm:flex-row sm:items-center justify-between border p-3 rounded-md bg-card gap-3">
-                      <div>
-                        <p className="font-medium text-sm">{doc.type.name_es}</p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{doc.type.name_es}</p>
+                          <Badge 
+                            variant={
+                              doc.status === 'approved' ? 'default' : 
+                              doc.status === 'rejected' ? 'destructive' : 'secondary'
+                            }
+                            className="text-[10px] px-1 py-0 h-4"
+                          >
+                            {doc.status === 'approved' ? 'Aprobado' : 
+                             doc.status === 'rejected' ? 'Rechazado' : 'Pendiente'}
+                          </Badge>
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           Subido: {new Date(doc.created_at).toLocaleDateString('es-VE')}
                         </p>
-                        {doc.status === 'rejected' && (
-                          <Badge variant="destructive" className="mt-1 flex items-center gap-1 w-max text-[10px]">
-                            <XCircle className="h-3 w-3" /> Rechazado
-                          </Badge>
-                        )}
                       </div>
-                      <a
-                        href={doc.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-sm font-medium text-primary hover:underline"
-                      >
-                        Ver Documento
-                      </a>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs font-medium text-primary hover:underline mr-2"
+                        >
+                          Ver
+                        </a>
+                        <Button 
+                          size="icon" 
+                          variant="outline" 
+                          className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => handleReviewDoc(doc.id, 'approved')}
+                          disabled={isPending || doc.status === 'approved'}
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          size="icon" 
+                          variant="outline" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/5"
+                          onClick={() => handleReviewDoc(doc.id, 'rejected')}
+                          disabled={isPending || doc.status === 'rejected'}
+                        >
+                          <XCircle className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

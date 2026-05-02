@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const transactionItemSchema = z.object({
   id: z.string().uuid().or(z.string()),
+  serial_number: z.number().optional().nullable(),
   buyer_name: z.string().nullable().optional(),
   supplier_name: z.string().nullable().optional(),
   product_description: z.string().nullable().optional(),
