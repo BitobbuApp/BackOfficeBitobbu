@@ -9,4 +9,11 @@ export const rfqsApi = {
     }
     return rfqsListResponseSchema.parse(response.data);
   },
+
+  async exportList(params) {
+    return apiClient.get('/admin/rfqs/export', {
+      params,
+      responseType: 'blob',
+    });
+  },
 };

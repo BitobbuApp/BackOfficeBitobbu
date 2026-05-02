@@ -16,4 +16,12 @@ export const usersApi = {
     const response = await apiClient.patch(`/admin/users/${id}/status`, { status, reason });
     return response;
   },
+
+  async exportList(params) {
+    const response = await apiClient.get('/admin/users/export', {
+      params,
+      responseType: 'blob',
+    });
+    return response;
+  },
 };

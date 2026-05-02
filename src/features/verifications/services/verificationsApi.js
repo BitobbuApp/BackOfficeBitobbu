@@ -23,4 +23,8 @@ export const verificationsApi = {
   async reject(id, { reason }) {
     return apiClient.patch(`/admin/verifications/${id}/reject`, { reason });
   },
+
+  async reviewDocument(docId, { status, notes }) {
+    return apiClient.patch(`/admin/verifications/documents/${docId}`, { status, notes });
+  },
 };

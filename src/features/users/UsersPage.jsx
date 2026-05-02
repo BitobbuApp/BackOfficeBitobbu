@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { MoreHorizontal, Search, UserRound } from 'lucide-react';
+import { Download, MoreHorizontal, Search, UserRound } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
+import { useDownloadFile } from '@/hooks/useDownloadFile';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { usersApi } from './services/usersApi';
 import { useUpdateUserStatus, useUsersList } from './hooks/useUsersData';
 
 const PAGE_SIZE = 10;
@@ -66,6 +68,7 @@ export default function UsersPage() {
 
   const { data: usersData, isLoading, isError } = useUsersList(queryParams);
   const { mutate: updateStatus, isPending: isUpdatingStatus } = useUpdateUserStatus();
+  const { downloadFile, isDownloading } = useDownloadFile();
 
   const users = usersData?.items || [];
   const totalPages = usersData?.total_pages || 1;
@@ -82,11 +85,26 @@ export default function UsersPage() {
     );
   };
 
+  const handleExport = async () => {
+    await downloadFile({
+      downloader: () => usersApi.exportList(queryParams),
+      filename: 'usuarios.csv',
+      successMessage: 'Exportacion iniciada',
+      errorMessage: 'Error al exportar usuarios',
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-semibold text-foreground">Users</h1>
-        <Badge variant="secondary">{totalCount} resultados</Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="secondary">{totalCount} resultados</Badge>
+          <Button variant="outline" onClick={handleExport} disabled={isDownloading}>
+            <Download className="mr-2 h-4 w-4" />
+            {isDownloading ? 'Descargando...' : 'Exportar CSV'}
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-3 sm:flex-row">

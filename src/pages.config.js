@@ -8,6 +8,9 @@ import RfqsPage from '@/features/rfqs/RfqsPage';
 import QuoteResponsesPage from '@/features/quoteResponses/QuoteResponsesPage';
 import TransactionsPage from '@/features/transactions/TransactionsPage';
 import GeographyPage from '@/features/geography/GeographyPage';
+import AdminsPage from '@/features/admins/AdminsPage';
+import LegacyLookupsRedirect from '@/features/lookups/LegacyLookupsRedirect';
+import LookupsIndexPage from '@/features/lookups/LookupsIndexPage';
 
 export const MAIN_PAGES = [
   {
@@ -42,9 +45,16 @@ export const MAIN_PAGES = [
   },
   {
     path: '/lookups',
-    name: 'Lookups',
-    component: LookupsPage,
-    showInSidebar: true,
+    name: 'Lookups (Legacy)',
+    component: LegacyLookupsRedirect,
+    showInSidebar: false,
+  },
+  {
+    path: '/config/lookups',
+    name: 'Configuracion',
+    component: LookupsIndexPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
   },
   {
     path: '/rfqs',
@@ -69,5 +79,18 @@ export const MAIN_PAGES = [
     name: 'Geography',
     component: GeographyPage,
     showInSidebar: true,
+  },
+  {
+    path: '/admins',
+    name: 'Admins',
+    component: AdminsPage,
+    showInSidebar: true,
+  },
+  {
+    path: '/config/lookups/:tableKey',
+    name: 'Lookup Table Detail',
+    component: LookupsPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
   },
 ];

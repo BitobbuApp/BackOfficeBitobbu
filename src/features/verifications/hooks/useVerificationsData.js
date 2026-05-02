@@ -54,3 +54,18 @@ export function useRejectVerification() {
     },
   });
 }
+
+export function useReviewDocument() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ docId, data }) => verificationsApi.reviewDocument(docId, data),
+    onSuccess: (_, { docId }) => {
+      queryClient.invalidateQueries({ queryKey: ['verifications'] });
+      toast.success('Documento actualizado');
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || 'Error al actualizar documento');
+    },
+  });
+}

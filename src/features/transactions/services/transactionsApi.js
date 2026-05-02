@@ -9,4 +9,11 @@ export const transactionsApi = {
     }
     return transactionsListResponseSchema.parse(response.data);
   },
+
+  async exportList(params) {
+    return apiClient.get('/admin/transactions/export', {
+      params,
+      responseType: 'blob',
+    });
+  },
 };

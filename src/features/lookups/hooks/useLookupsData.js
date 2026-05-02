@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { lookupsApi } from '../services/lookupsApi';
 import { toast } from 'sonner';
 
-export function useLookupsList(tableKey) {
+export function useLookupsList(tableConfig) {
   return useQuery({
-    queryKey: ['lookups', tableKey],
-    queryFn: () => lookupsApi.getList(tableKey),
-    enabled: !!tableKey,
+    queryKey: ['lookups', tableConfig?.key, tableConfig?.endpoint],
+    queryFn: () => lookupsApi.getList(tableConfig),
+    enabled: !!tableConfig?.endpoint,
   });
 }
 
@@ -14,9 +14,9 @@ export function useCreateLookup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableKey, data }) => lookupsApi.create(tableKey, data),
+    mutationFn: ({ tableConfig, data }) => lookupsApi.create(tableConfig, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableKey] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableConfig.key] });
       toast.success('Registro creado correctamente');
     },
     onError: (error) => {
@@ -29,9 +29,9 @@ export function useUpdateLookup() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableKey, id, data }) => lookupsApi.update(tableKey, id, data),
+    mutationFn: ({ tableConfig, id, data }) => lookupsApi.update(tableConfig, id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableKey] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableConfig.key] });
       toast.success('Registro actualizado correctamente');
     },
     onError: (error) => {
@@ -44,9 +44,9 @@ export function useUpdateLookupStatus() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ tableKey, id, data }) => lookupsApi.updateStatus(tableKey, id, data),
+    mutationFn: ({ tableConfig, id, data }) => lookupsApi.updateStatus(tableConfig, id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableKey] });
+      queryClient.invalidateQueries({ queryKey: ['lookups', variables.tableConfig.key] });
       toast.success('Estado del registro actualizado');
     },
     onError: (error) => {
