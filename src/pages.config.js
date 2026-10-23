@@ -11,6 +11,7 @@ import GeographyPage from '@/features/geography/GeographyPage';
 import AdminsPage from '@/features/admins/AdminsPage';
 import LegacyLookupsRedirect from '@/features/lookups/LegacyLookupsRedirect';
 import LookupsIndexPage from '@/features/lookups/LookupsIndexPage';
+import SubcategoriesPage from '@/features/subcategories/SubcategoriesPage';
 
 export const MAIN_PAGES = [
   {
@@ -90,6 +91,13 @@ export const MAIN_PAGES = [
     path: '/config/lookups/:tableKey',
     name: 'Lookup Table Detail',
     component: LookupsPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
+  },
+  {
+    path: '/config/subcategories',
+    name: 'Subcategorias',
+    component: SubcategoriesPage,
     showInSidebar: false,
     sidebarGroup: 'config',
   },
