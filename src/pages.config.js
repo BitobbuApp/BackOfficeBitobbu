@@ -12,6 +12,7 @@ import AdminsPage from '@/features/admins/AdminsPage';
 import LegacyLookupsRedirect from '@/features/lookups/LegacyLookupsRedirect';
 import LookupsIndexPage from '@/features/lookups/LookupsIndexPage';
 import SubcategoriesPage from '@/features/subcategories/SubcategoriesPage';
+import SystemSettingsPage from '@/features/systemSettings/SystemSettingsPage';
 
 export const MAIN_PAGES = [
   {
@@ -98,6 +99,13 @@ export const MAIN_PAGES = [
     path: '/config/subcategories',
     name: 'Subcategorias',
     component: SubcategoriesPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
+  },
+  {
+    path: '/config/system-settings',
+    name: 'Configuracion del sistema',
+    component: SystemSettingsPage,
     showInSidebar: false,
     sidebarGroup: 'config',
   },
