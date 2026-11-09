@@ -9,13 +9,26 @@ export function useSubscriptionsList(params) {
   });
 }
 
-export function useChangeSubscriptionPlan() {
+export function useSubscriptionHistory(companyId) {
+  return useQuery({
+    queryKey: ['subscriptions', 'history', companyId],
+    queryFn: () => subscriptionsApi.getHistory(companyId),
+    enabled: !!companyId,
+  });
+}
+
+function useInvalidateSubscriptions() {
   const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ['subscriptions'] });
+}
+
+export function useChangeSubscriptionPlan() {
+  const invalidate = useInvalidateSubscriptions();
 
   return useMutation({
     mutationFn: ({ companyId, data }) => subscriptionsApi.changePlan(companyId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions', 'list'] });
+      invalidate();
       toast.success('Plan actualizado correctamente');
     },
     onError: (error) => {
@@ -25,12 +38,12 @@ export function useChangeSubscriptionPlan() {
 }
 
 export function useExtendSubscriptionDays() {
-  const queryClient = useQueryClient();
+  const invalidate = useInvalidateSubscriptions();
 
   return useMutation({
     mutationFn: ({ companyId, data }) => subscriptionsApi.extendDays(companyId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['subscriptions', 'list'] });
+      invalidate();
       toast.success('Días de suscripción extendidos correctamente');
     },
     onError: (error) => {

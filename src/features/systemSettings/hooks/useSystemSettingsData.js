@@ -8,16 +8,21 @@ export function useSystemSettings(enabled = true) {
   return useQuery({ queryKey: QUERY_KEY, queryFn: systemSettingsApi.getList, enabled });
 }
 
-export function useUpdateSystemSetting() {
+export function useUpdateSystemSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ key, value }) => systemSettingsApi.update(key, value),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
-      toast.success('Configuracion actualizada');
+    mutationFn: (values) => systemSettingsApi.updateMany(values),
+    onSuccess: (list) => {
+      queryClient.setQueryData(QUERY_KEY, list);
+      toast.success('Configuracion guardada');
     },
     onError: (error) => {
-      toast.error(error?.response?.data?.message || 'Error al actualizar la configuracion');
+      // Validation errors list every invalid field: show them all.
+      const details = error?.response?.data?.error?.details;
+      const message = Array.isArray(details) && details.length
+        ? details.join(' · ')
+        : error?.response?.data?.message || 'Error al guardar la configuracion';
+      toast.error(message);
     },
   });
 }

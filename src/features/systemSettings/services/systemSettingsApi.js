@@ -1,5 +1,5 @@
 import apiClient from '@/api/axiosClient';
-import { systemSettingsListSchema, systemSettingSchema } from '../schemas/systemSettings.schema';
+import { systemSettingsListSchema } from '../schemas/systemSettings.schema';
 
 export const systemSettingsApi = {
   async getList() {
@@ -7,9 +7,10 @@ export const systemSettingsApi = {
     return systemSettingsListSchema.parse(response?.data ?? []);
   },
 
-  async update(key, value) {
-    const response = await apiClient.put(`/admin/settings/${key}`, { value });
-    return systemSettingSchema.parse(response?.data);
+  /** Saves several settings at once (all-or-nothing). values: { [key]: value } */
+  async updateMany(values) {
+    const response = await apiClient.put('/admin/settings', { values });
+    return systemSettingsListSchema.parse(response?.data ?? []);
   },
 
   async test(group, payload = {}) {

@@ -1,20 +1,15 @@
 import apiClient from '@/api/axiosClient';
-import { subscriptionItemSchema, subscriptionsListResponseSchema } from '../schemas/subscriptions.schema';
+import { subscriptionHistorySchema, subscriptionsListResponseSchema } from '../schemas/subscriptions.schema';
 
 export const subscriptionsApi = {
   async getList(params) {
     const response = await apiClient.get('/admin/subscriptions', { params });
-    // Handle array or paginated object structure
-    if (Array.isArray(response)) {
-      return { items: response.map(item => subscriptionItemSchema.parse(item)) };
-    }
+    return subscriptionsListResponseSchema.parse(response?.data ?? { items: [] });
+  },
 
-    // In case the paginated structure has an array directly or inside items
-    if (response.items) {
-      return subscriptionsListResponseSchema.parse(response);
-    }
-
-    return { items: [] };
+  async getHistory(companyId) {
+    const response = await apiClient.get(`/admin/subscriptions/${companyId}/history`);
+    return subscriptionHistorySchema.parse(response?.data ?? []);
   },
 
   async changePlan(companyId, { plan_code, reason }) {

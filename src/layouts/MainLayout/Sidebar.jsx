@@ -10,6 +10,7 @@ import {
   Package,
   ReceiptText,
   Users,
+  Wallet,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { MAIN_PAGES } from '@/pages.config';
@@ -23,6 +24,7 @@ const iconByPath = {
   '/users': Users,
   '/verifications': CheckCircle2,
   '/subscriptions': CreditCard,
+  '/subscription-payments': Wallet,
   '/plans-catalog': Package,
   '/rfqs': ClipboardList,
   '/quote-responses': FileText,
@@ -89,7 +91,7 @@ export default function Sidebar() {
           {LOOKUP_TABLES.map((table) => (
             <NavLink
               key={table.key}
-              to={`/config/lookups/${table.key}`}
+              to={table.path ?? `/config/lookups/${table.key}`}
               className={({ isActive }) =>
                 cn(
                   'ml-2 flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
