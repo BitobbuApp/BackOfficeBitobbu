@@ -30,7 +30,7 @@ export default function LookupsIndexPage() {
                 Endpoint: <code>{table.endpointLabel}</code>
               </p>
               <Link
-                to={`/config/lookups/${table.key}`}
+                to={table.path ?? `/config/lookups/${table.key}`}
                 className="inline-flex text-sm font-medium text-primary underline-offset-4 hover:underline"
               >
                 Gestionar tabla

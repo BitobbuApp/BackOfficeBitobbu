@@ -2,6 +2,7 @@ import DashboardPage from '@/features/dashboard/DashboardPage';
 import UsersPage from '@/features/users/UsersPage';
 import VerificationsPage from '@/features/verifications/VerificationsPage';
 import SubscriptionsPage from '@/features/subscriptions/SubscriptionsPage';
+import SubscriptionPaymentsPage from '@/features/subscriptionPayments/SubscriptionPaymentsPage';
 import PlansCatalogPage from '@/features/plansCatalog/PlansCatalogPage';
 import LookupsPage from '@/features/lookups/LookupsPage';
 import RfqsPage from '@/features/rfqs/RfqsPage';
@@ -12,6 +13,8 @@ import AdminsPage from '@/features/admins/AdminsPage';
 import LegacyLookupsRedirect from '@/features/lookups/LegacyLookupsRedirect';
 import LookupsIndexPage from '@/features/lookups/LookupsIndexPage';
 import SubcategoriesPage from '@/features/subcategories/SubcategoriesPage';
+import SystemSettingsPage from '@/features/systemSettings/SystemSettingsPage';
+import ExchangeRatesPage from '@/features/exchangeRates/ExchangeRatesPage';
 
 export const MAIN_PAGES = [
   {
@@ -36,6 +39,12 @@ export const MAIN_PAGES = [
     path: '/subscriptions',
     name: 'Subscriptions',
     component: SubscriptionsPage,
+    showInSidebar: true,
+  },
+  {
+    path: '/subscription-payments',
+    name: 'Pagos reportados',
+    component: SubscriptionPaymentsPage,
     showInSidebar: true,
   },
   {
@@ -98,6 +107,20 @@ export const MAIN_PAGES = [
     path: '/config/subcategories',
     name: 'Subcategorias',
     component: SubcategoriesPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
+  },
+  {
+    path: '/config/exchange-rates',
+    name: 'Tasas de cambio',
+    component: ExchangeRatesPage,
+    showInSidebar: false,
+    sidebarGroup: 'config',
+  },
+  {
+    path: '/config/system-settings',
+    name: 'Configuracion del sistema',
+    component: SystemSettingsPage,
     showInSidebar: false,
     sidebarGroup: 'config',
   },

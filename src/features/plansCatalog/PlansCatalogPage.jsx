@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -31,21 +32,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-function emptyForm() {
-  return {
-    name: '',
-    price: '',
-    billing_cycle: '30',
-  };
-}
-
 import {
   useCreatePlan,
   usePlansCatalogList,
   useUpdatePlan,
   useUpdatePlanStatus,
 } from './hooks/usePlansCatalogData';
+
+function emptyForm() {
+  return {
+    code: '',
+    name: '',
+    name_es: '',
+    price: '',
+    billing_cycle: '30',
+    max_quotes_per_month: '',
+    max_active_offers: '',
+    sort_order: '0',
+    is_default: false,
+  };
+}
+
+// Empty input = unlimited (null).
+const toLimit = (value) => (value === '' || value === null || value === undefined ? null : Number(value));
+const fromLimit = (value) => (value === null || value === undefined ? '' : String(value));
+const formatLimit = (value) => (value === null || value === undefined ? 'Ilimitado' : value);
 
 export default function PlansCatalogPage() {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -61,9 +72,11 @@ export default function PlansCatalogPage() {
   const plans = data?.items || [];
 
   const sortedPlans = useMemo(
-    () => [...plans].sort((a, b) => a.name.localeCompare(b.name)),
+    () => [...plans].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || Number(a.price) - Number(b.price)),
     [plans]
   );
+
+  const setField = (field) => (event) => setForm((prev) => ({ ...prev, [field]: event.target.value }));
 
   const openCreate = () => {
     setEditingPlan(null);
@@ -74,11 +87,23 @@ export default function PlansCatalogPage() {
   const openEdit = (plan) => {
     setEditingPlan(plan);
     setForm({
+      code: plan.code,
       name: plan.name,
+      name_es: plan.name_es ?? '',
       price: String(plan.price),
-      billing_cycle: String(plan.billing_cycle),
+      billing_cycle: String(plan.billing_cycle ?? 30),
+      max_quotes_per_month: fromLimit(plan.max_quotes_per_month),
+      max_active_offers: fromLimit(plan.max_active_offers),
+      sort_order: String(plan.sort_order ?? 0),
+      is_default: !!plan.is_default,
     });
     setIsEditorOpen(true);
+  };
+
+  const closeEditor = () => {
+    setIsEditorOpen(false);
+    setEditingPlan(null);
+    setForm(emptyForm());
   };
 
   const savePlan = () => {
@@ -86,46 +111,36 @@ export default function PlansCatalogPage() {
       toast.error('El nombre del plan es obligatorio');
       return;
     }
+    if (!/^[a-z0-9_]+$/.test(form.code.trim())) {
+      toast.error('El codigo solo admite minusculas, numeros y guion bajo');
+      return;
+    }
 
     const payload = {
+      code: form.code.trim(),
       name: form.name.trim(),
+      name_es: form.name_es.trim(),
       price: Number(form.price || 0),
       billing_cycle: Number(form.billing_cycle || 30),
+      max_quotes_per_month: toLimit(form.max_quotes_per_month),
+      max_active_offers: toLimit(form.max_active_offers),
+      sort_order: Number(form.sort_order || 0),
     };
+    // The backend refuses to unset the default plan directly; only send it when turning it on.
+    if (form.is_default && !editingPlan?.is_default) payload.is_default = true;
 
     if (editingPlan) {
-      updatePlan(
-        { id: editingPlan.id, data: payload },
-        {
-          onSuccess: () => {
-            setIsEditorOpen(false);
-            setEditingPlan(null);
-            setForm(emptyForm());
-          },
-        }
-      );
+      updatePlan({ id: editingPlan.id, data: payload }, { onSuccess: closeEditor });
     } else {
-      createPlan(payload, {
-        onSuccess: () => {
-          setIsEditorOpen(false);
-          setEditingPlan(null);
-          setForm(emptyForm());
-        },
-      });
+      createPlan(payload, { onSuccess: closeEditor });
     }
   };
 
   const toggleStatus = () => {
     if (!deactivateTarget) return;
-    const nextStatus = !deactivateTarget.is_active;
-
     updateStatus(
-      { id: deactivateTarget.id, data: { status: nextStatus, reason: 'Cambio de estado manual' } },
-      {
-        onSuccess: () => {
-          setDeactivateTarget(null);
-        },
-      }
+      { id: deactivateTarget.id, data: { status: !deactivateTarget.is_active, reason: 'Cambio de estado manual' } },
+      { onSuccess: () => setDeactivateTarget(null) }
     );
   };
 
@@ -137,7 +152,7 @@ export default function PlansCatalogPage() {
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Plans Catalog</h1>
           <p className="text-sm text-muted-foreground">
-            Crear, actualizar y desactivar planes de suscripcion.
+            Planes de suscripcion y sus limites mensuales. Un limite vacio significa ilimitado.
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -158,6 +173,8 @@ export default function PlansCatalogPage() {
                 <TableHead>Plan</TableHead>
                 <TableHead>Precio (USD)</TableHead>
                 <TableHead>Ciclo (Días)</TableHead>
+                <TableHead>Cotizaciones / mes</TableHead>
+                <TableHead>Ofertas activas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -178,9 +195,17 @@ export default function PlansCatalogPage() {
               ) : (
                 sortedPlans.map((plan) => (
                   <TableRow key={plan.id}>
-                    <TableCell className="font-medium">{plan.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{plan.name_es || plan.name}</span>
+                        {plan.is_default && <Badge variant="secondary">Por defecto</Badge>}
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">{plan.code}</span>
+                    </TableCell>
                     <TableCell>${plan.price}</TableCell>
                     <TableCell>{plan.billing_cycle}</TableCell>
+                    <TableCell>{formatLimit(plan.max_quotes_per_month)}</TableCell>
+                    <TableCell>{formatLimit(plan.max_active_offers)}</TableCell>
                     <TableCell>
                       <Badge variant={plan.is_active ? 'default' : 'secondary'}>
                         {plan.is_active ? 'Activo' : 'Inactivo'}
@@ -194,6 +219,7 @@ export default function PlansCatalogPage() {
                         <Button
                           size="sm"
                           variant={plan.is_active ? 'destructive' : 'secondary'}
+                          disabled={plan.is_default}
                           onClick={() => setDeactivateTarget(plan)}
                         >
                           {plan.is_active ? 'Desactivar' : 'Activar'}
@@ -208,59 +234,71 @@ export default function PlansCatalogPage() {
         </div>
       )}
 
-      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+      <Dialog open={isEditorOpen} onOpenChange={(open) => (open ? setIsEditorOpen(true) : closeEditor())}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingPlan ? 'Editar Plan' : 'Crear Plan'}</DialogTitle>
-            <DialogDescription>Modificar la configuración del plan.</DialogDescription>
+            <DialogDescription>
+              Los limites aplican de inmediato a todas las empresas en este plan.
+            </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-3">
-            <div className="space-y-1">
-              <Label>Name</Label>
-              <Input
-                value={form.name}
-                onChange={(event) =>
-                  setForm((prev) => ({ ...prev, name: event.target.value }))
-                }
-                placeholder="Growth Plus"
-                disabled={isSaving}
-              />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Codigo</Label>
+                <Input value={form.code} onChange={setField('code')} placeholder="starter" disabled={isSaving} />
+              </div>
+              <div className="space-y-1">
+                <Label>Orden</Label>
+                <Input type="number" min="0" value={form.sort_order} onChange={setField('sort_order')} disabled={isSaving} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Nombre</Label>
+                <Input value={form.name} onChange={setField('name')} placeholder="Starter" disabled={isSaving} />
+              </div>
+              <div className="space-y-1">
+                <Label>Nombre visible (ES)</Label>
+                <Input value={form.name_es} onChange={setField('name_es')} placeholder="Starter" disabled={isSaving} />
+              </div>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="space-y-1">
                 <Label>Precio USD</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.price}
-                  onChange={(event) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      price: event.target.value,
-                    }))
-                  }
-                  disabled={isSaving}
-                />
+                <Input type="number" min="0" step="0.01" value={form.price} onChange={setField('price')} disabled={isSaving} />
               </div>
               <div className="space-y-1">
                 <Label>Ciclo de Facturación (Días)</Label>
-                <Input
-                  type="number"
-                  min="0"
-                  value={form.billing_cycle}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, billing_cycle: event.target.value }))
-                  }
-                  disabled={isSaving}
-                />
+                <Input type="number" min="1" value={form.billing_cycle} onChange={setField('billing_cycle')} disabled={isSaving} />
               </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Cotizaciones por mes</Label>
+                <Input type="number" min="0" placeholder="Ilimitado" value={form.max_quotes_per_month} onChange={setField('max_quotes_per_month')} disabled={isSaving} />
+              </div>
+              <div className="space-y-1">
+                <Label>Ofertas activas</Label>
+                <Input type="number" min="0" placeholder="Ilimitado" value={form.max_active_offers} onChange={setField('max_active_offers')} disabled={isSaving} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label>Plan por defecto</Label>
+                <p className="text-xs text-muted-foreground">Las empresas nuevas empiezan en este plan.</p>
+              </div>
+              <Switch
+                checked={form.is_default}
+                disabled={isSaving || editingPlan?.is_default}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, is_default: checked }))}
+              />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditorOpen(false)} disabled={isSaving}>
+            <Button variant="outline" onClick={closeEditor} disabled={isSaving}>
               Cancelar
             </Button>
             <Button onClick={savePlan} disabled={isSaving}>

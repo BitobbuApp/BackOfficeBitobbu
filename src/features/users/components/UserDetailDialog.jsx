@@ -131,10 +131,12 @@ export function UserDetailDialog({ userId, onClose }) {
                         </span>
                         <span>
                           <Badge className="bg-amber-500 hover:bg-amber-600">
-                            {userDetail.company.subscriptions[0].plan?.name}
+                            {userDetail.company.subscriptions[0].plan?.name_es || userDetail.company.subscriptions[0].plan?.plan_name}
                           </Badge>
                           <span className="text-xs text-muted-foreground ml-2">
-                            hasta {new Date(userDetail.company.subscriptions[0].end_date).toLocaleDateString('es-VE')}
+                            {userDetail.company.subscriptions[0].current_period_end
+                              ? `hasta ${new Date(userDetail.company.subscriptions[0].current_period_end).toLocaleDateString('es-VE')}`
+                              : 'sin vencimiento'}
                           </span>
                         </span>
                       </div>
