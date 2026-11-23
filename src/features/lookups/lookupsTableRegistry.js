@@ -161,6 +161,8 @@ export const LOOKUP_TABLES = [
   {
     key: 'exchange_rates',
     label: 'Tasas de Cambio',
+    // Dedicated page with the daily rate form instead of the generic read-only table.
+    path: '/config/exchange-rates',
     description: 'Paridades entre monedas.',
     area: 'Geografia y Moneda',
     appFunction: 'Mantiene paridades para calculos multi-moneda.',
