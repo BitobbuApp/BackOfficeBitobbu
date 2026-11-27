@@ -22,9 +22,10 @@ const GROUP_LABELS = {
   features: 'Funcionalidades',
   plans: 'Planes',
   payments: 'Pagos (pago movil)',
+  marketing: 'Marketing y Analítica (Meta CAPI)',
 };
 
-const TESTABLE_GROUPS = ['email', 'telegram'];
+const TESTABLE_GROUPS = ['email', 'telegram', 'marketing'];
 
 function toDisplay(setting) {
   if (setting.value === null || setting.value === undefined) return '';
